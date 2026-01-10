@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How I Met My Babu</title>
+    
+    <!-- 1. TAILWIND CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. REACT & REACT DOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 3. BABEL (To translate JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 4. FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; }
+        .font-pixel { font-family: 'Press Start 2P', cursive; } 
+        .scanlines { background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2)); background-size: 100% 4px; }
+        @keyframes fall { to { transform: translateY(100vh); } }
+        @keyframes rain { to { transform: translateY(100vh); } }
+        @keyframes floatUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100px); opacity: 0; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+        
+        /* Hide Scrollbar */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- ICONS ---
+        const IconBase = ({ d, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d={d} />
+            </svg>
+        );
+        const Volume2 = (p) => <IconBase d="M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" {...p} />;
+        const VolumeX = (p) => <IconBase d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" {...p} />;
+        const Heart = (p) => <IconBase d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" {...p} />;
+        const ChevronRight = (p) => <IconBase d="m9 18 6-6-6-6" {...p} />;
+        const ChevronLeft = (p) => <IconBase d="m15 18-6-6 6-6" {...p} />;
+        const Rewind = (p) => <IconBase d="m11 19-9-7 9-7v14zM22 19l-9-7 9-7v14z" {...p} />;
+        const Home = (p) => <IconBase d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" {...p}><polyline points="9 22 9 12 15 12 15 22" /></IconBase>;
+        const Music = (p) => <IconBase d="M9 18V5l12-2v13" {...p}><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></IconBase>;
+        const RotateCcw = (p) => <IconBase d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" {...p}><path d="M3 3v5h5" /></IconBase>;
+        const Users = (p) => <IconBase d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" {...p}><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></IconBase>;
+        const Play = (p) => <IconBase d="M5 3l14 9-14 9V3z" {...p} />;
+
+        // --- CONSTANTS ---
+        const AUDIO_TRACKS = {
+            THEME: "https://cs1.mp3.pm/download/245105430/eE5iM2lhTnk3cjV4YThpSldXVnZ3UHhYYmJaNFlickdWOEc0OTZvZlNQcDVRdFgwT0YzN0NYVmN6TWhBMHlsSUdRdkxqSU9vZ3k3US90ZDhPblBWMUtZend6V2dCZkVDL1VLQ1lwZmJpS0xNTWZVQlJpUW1WcmFuRkcvekdkaEY/JVKE_John_Michael_Howell_-_her_feat._John_Michael_Howell_(mp3.pm).mp3", 
+        };
+
+        // --- SOUND MANAGER ---
+        const SoundManager = {
+            ctx: null,
+            init: () => {
+                if (!SoundManager.ctx) {
+                    SoundManager.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (SoundManager.ctx.state === 'suspended') {
+                    SoundManager.ctx.resume();
+                }
+            },
+            playTone: (freq, type, duration, vol = 0.1) => {
+                if (!SoundManager.ctx) return;
+                const osc = SoundManager.ctx.createOscillator();
+                const gain = SoundManager.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, SoundManager.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, SoundManager.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, SoundManager.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(SoundManager.ctx.destination);
+                osc.start();
+                osc.stop(SoundManager.ctx.currentTime + duration);
+            },
+            type: () => SoundManager.playTone(800 + Math.random() * 200, 'sine', 0.05, 0.05),
+            hover: () => SoundManager.playTone(400, 'triangle', 0.05, 0.05),
+            click: () => SoundManager.playTone(600, 'sine', 0.1, 0.05),
+            back: () => SoundManager.playTone(300, 'square', 0.1, 0.05),
+            trap: () => {
+                SoundManager.playTone(150, 'sawtooth', 0.5, 0.2);
+                setTimeout(() => SoundManager.playTone(100, 'sawtooth', 0.5, 0.2), 100);
+            },
+            success: () => {
+                const now = SoundManager.ctx.currentTime;
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    setTimeout(() => SoundManager.playTone(freq, 'sine', 0.6, 0.1), i * 150);
+                });
+            }
+        };
+
+        // --- CHARACTERS ---
+        const Character = ({ type, variant = "default", className = "" }) => {
+            const Gradients = () => (
+                <defs>
+                    <linearGradient id="skinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#ffedd5" />
+                        <stop offset="100%" stopColor="#fdba74" />
+                    </linearGradient>
+                    <linearGradient id="hairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#334155" />
+                        <stop offset="100%" stopColor="#0f172a" />
+                    </linearGradient>
+                    <linearGradient id="sareeRed" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#ef4444" />
+                        <stop offset="100%" stopColor="#991b1b" />
+                    </linearGradient>
+                    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#fcd34d" />
+                        <stop offset="50%" stopColor="#fff" />
+                        <stop offset="100%" stopColor="#f59e0b" />
+                    </linearGradient>
+                </defs>
+            );
+
+            if (type === 'dad') return <svg viewBox="0 0 100 100" className={`w-full h-full filter drop-shadow-lg ${className}`}><Gradients /><path d="M30,50 L70,50 L75,100 L25,100 Z" fill="#e2e8f0" /><rect x="42" y="40" width="16" height="15" fill="url(#skinGrad)" /><circle cx="50" cy="30" r="16" fill="url(#skinGrad)" /><path d="M30,28 Q50,15 70,28 L70,35 L68,25 Q50,20 32,25 Z" fill="#94a3b8" /><rect x="34" y="32" width="32" height="2" fill="#000" /><circle cx="42" cy="34" r="4" fill="none" stroke="#000" strokeWidth="1" /><circle cx="58" cy="34" r="4" fill="none" stroke="#000" strokeWidth="1" /><path d="M35,42 Q50,48 65,42" fill="none" stroke="#64748b" strokeWidth="2" /></svg>;
+            if (type === 'mom') return <svg viewBox="0 0 100 100" className={`w-full h-full filter drop-shadow-lg ${className}`}><Gradients /><path d="M25,50 Q50,100 75,50 L85,100 L15,100 Z" fill="url(#sareeRed)" /><path d="M25,50 L75,100" stroke="url(#gold)" strokeWidth="5" opacity="0.8"/><rect x="42" y="40" width="16" height="15" fill="url(#skinGrad)" /><circle cx="50" cy="30" r="15" fill="url(#skinGrad)" /><path d="M30,20 Q50,10 70,20 Q75,40 70,50 L30,50 Q25,40 30,20 Z" fill="#1e1e1e" /><circle cx="50" cy="28" r="2" fill="#ef4444" /><circle cx="42" cy="32" r="1.5" fill="#000" /><circle cx="58" cy="32" r="1.5" fill="#000" /></svg>;
+            if (type === 'guest_m') return <svg viewBox="0 0 100 100" className={`w-full h-full ${className}`}><path d="M30,50 L70,50 L70,100 L30,100 Z" fill={variant === 'blue' ? '#3b82f6' : '#22c55e'} /><circle cx="50" cy="30" r="14" fill="#ffedd5" /><path d="M35,25 Q50,15 65,25" fill="none" stroke="#0f172a" strokeWidth="6" /></svg>;
+            if (type === 'guest_f') return <svg viewBox="0 0 100 100" className={`w-full h-full ${className}`}><path d="M25,50 Q50,90 75,50 L80,100 L20,100 Z" fill={variant === 'pink' ? '#db2777' : '#a855f7'} /><path d="M20,50 L80,100" stroke="#fcd34d" strokeWidth="2" /><circle cx="50" cy="30" r="14" fill="#ffedd5" /><circle cx="50" cy="20" r="16" fill="#0f172a" clipPath="inset(0 0 50% 0)" /></svg>;
+            
+            if (type === 'ezio') return <svg viewBox="0 0 100 100" className={`w-full h-full filter drop-shadow-lg ${className}`}><Gradients /><path d="M25,50 Q50,45 75,50 L80,100 L20,100 Z" fill="#334155" /><path d="M25,50 Q50,70 75,50" fill="#475569" /><rect x="42" y="40" width="16" height="15" fill="url(#skinGrad)" /><circle cx="50" cy="30" r="16" fill="url(#skinGrad)" /><path d="M30,25 Q35,10 50,5 Q65,10 70,25 Q72,30 70,35 L68,30 L65,35 Q50,20 35,35 L32,30 Q30,30 30,25 Z" fill="#0f172a" /><path d="M28,25 Q50,15 72,25" fill="none" stroke="#ef4444" strokeWidth="4" /><rect x="24" y="22" width="8" height="16" rx="2" fill="#ef4444" /><rect x="68" y="22" width="8" height="16" rx="2" fill="#ef4444" /><circle cx="44" cy="32" r="2" fill="#000" /><circle cx="56" cy="32" r="2" fill="#000" /><path d="M48,38 Q50,40 52,38" fill="none" stroke="#000" strokeWidth="1" /></svg>;
+            if (type === 'siya') return <svg viewBox="0 0 100 100" className={`w-full h-full filter drop-shadow-lg ${className}`}><Gradients /><path d="M20,35 Q10,45 25,60 Q30,50 28,35 Z" fill="#1e293b" /><path d="M80,35 Q90,45 75,60 Q70,50 72,35 Z" fill="#1e293b" /><path d="M35,50 L65,50 L75,100 L25,100 Z" fill="#db2777" /><path d="M35,100 L65,100 L65,95 L35,95 Z" fill="#fce7f3" /><rect x="44" y="45" width="12" height="10" fill="url(#skinGrad)" /><circle cx="50" cy="35" r="18" fill="url(#skinGrad)" /><path d="M32,30 Q50,15 68,30 Q68,40 65,35 Q50,25 35,35 Q32,40 32,30 Z" fill="#1e293b" /><circle cx="42" cy="38" r="2" fill="#000" /><circle cx="58" cy="38" r="2" fill="#000" /><path d="M46,45 Q50,48 54,45" fill="none" stroke="#000" strokeWidth="1" /></svg>;
+
+            if (type === 'aman') {
+                const isHimalaya = variant === 'himalaya';
+                const isPotbelly = variant === 'potbelly';
+                const hasBeard = isPotbelly || isHimalaya; 
+                return <svg viewBox="0 0 100 100" className={`w-full h-full filter drop-shadow-lg ${className}`}><Gradients /><rect x="42" y="45" width="16" height="20" fill="url(#skinGrad)" />{isHimalaya ? (<g><path d="M30,55 Q50,50 70,55 L80,100 L20,100 Z" fill="#ea580c" /><path d="M30,55 Q50,65 70,55" fill="none" stroke="#7c2d12" strokeWidth="1" opacity="0.3" /></g>) : (<><path d={`M25,55 Q50,45 75,55 L75,100 L25,100 Z`} fill={isPotbelly ? "#1e3a8a" : "#3b82f6"} /><path d="M35,55 L50,65 L65,55" fill="none" stroke="#172554" strokeWidth="1" /></>)}{isHimalaya ? (<circle cx="50" cy="32" r="16" fill="url(#skinGrad)" />) : (<><path d="M30,28 Q50,5 70,28 L70,35 L68,42 Q50,50 32,42 L30,35 Z" fill="#0f172a" /><path d="M34,30 L66,30 L66,48 Q50,65 34,48 Z" fill="url(#skinGrad)" /></>)}<circle cx="43" cy="36" r="2" fill="#000" /><circle cx="57" cy="36" r="2" fill="#000" /><path d="M38,36 L48,36 M52,36 L62,36 M48,36 Q50,34 52,36" stroke="#000" strokeWidth="1" fill="none"/>{hasBeard && !isHimalaya && <path d="M34,38 Q34,55 50,58 Q66,55 66,38 L66,48 Q50,65 34,48 Z" fill="#1e293b" />}{isHimalaya && <path d="M34,40 Q50,75 66,40 L66,48 Q50,85 34,48 Z" fill="#e2e8f0" />}</svg>;
+            }
+
+            if (type === 'sneha') {
+                const isNerdy = variant === 'nerdy';
+                const isBride = variant === 'bride';
+                const isRichGirl = variant === 'rich_girl';
+                if (isRichGirl) return <svg viewBox="0 0 100 100" className={`w-full h-full filter drop-shadow-lg ${className}`}><Gradients /><path d="M25,25 Q50,0 75,25 Q85,40 85,70 L15,70 Q15,40 25,25 Z" fill="#2d2d2d" /><ellipse cx="50" cy="35" rx="15" ry="18" fill="url(#skinGrad)" /><rect x="38" y="32" width="10" height="6" fill="#000" rx="1"/><rect x="52" y="32" width="10" height="6" fill="#000" rx="1"/><line x1="48" y1="34" x2="52" y2="34" stroke="#000" /><path d="M35,55 L65,55 L75,100 L25,100 Z" fill="#a855f7" /><text x="10" y="30" fontSize="16" fill="#16a34a" fontWeight="bold" transform="rotate(-10 10,30)">$</text><text x="80" y="30" fontSize="16" fill="#16a34a" fontWeight="bold" transform="rotate(10 80,30)">$</text></svg>;
+                return <svg viewBox="0 0 100 100" className={`w-full h-full filter drop-shadow-lg ${className}`}><Gradients /><path d="M20,30 Q50,-10 80,30 Q90,60 85,90 L15,90 Q10,60 20,30 Z" fill="#1e1e1e" /><rect x="42" y="45" width="16" height="12" fill="url(#skinGrad)" /><ellipse cx="50" cy="35" rx="15" ry="17" fill="url(#skinGrad)" /><path d="M50,18 Q80,18 65,45 Q65,18 50,18 Q35,18 35,45 Q20,18 50,18 Z" fill="#1e1e1e" />{isNerdy ? (<g><circle cx="43" cy="35" r="4" fill="none" stroke="#000" strokeWidth="1" /><circle cx="57" cy="35" r="4" fill="none" stroke="#000" strokeWidth="1" /><line x1="47" y1="35" x2="53" y2="35" stroke="#000" strokeWidth="1" /></g>) : (<g><circle cx="42" cy="35" r="2" fill="#000" /><circle cx="58" cy="35" r="2" fill="#000" /></g>)}<path d="M35,55 L65,55 L72,100 L28,100 Z" fill={isBride ? "#be123c" : "#fbbf24"} /> {isBride && <path d="M28,90 L72,90 L72,100 L28,100 Z" fill="#881337" />}</svg>;
+            }
+
+            if (type === 'ring_box') {
+                if (variant === 'closed') return <svg viewBox="0 0 100 100" className={className}><Gradients /><rect x="25" y="40" width="50" height="35" rx="4" fill="#7f1d1d" stroke="#500724" strokeWidth="1"/><rect x="25" y="40" width="50" height="35" rx="4" fill="url(#skinGrad)" opacity="0.1"/> <line x1="25" y1="55" x2="75" y2="55" stroke="url(#gold)" strokeWidth="2" /><rect x="45" y="52" width="10" height="6" fill="url(#gold)" rx="1" /></svg>;
+                return <svg viewBox="0 0 100 100" className={className}><Gradients /><path d="M25,60 L75,60 L75,80 Q50,85 25,80 Z" fill="#7f1d1d" /><path d="M25,60 L15,25 L85,25 L75,60 Z" fill="#991b1b" stroke="#500724" /><path d="M30,30 L70,30 L73,60 L27,60 Z" fill="#fcd34d" opacity="0.2" /><g transform="translate(0, -2)"><circle cx="50" cy="45" r="16" fill="none" stroke="url(#gold)" strokeWidth="4" /><path d="M42,38 L50,50 L58,38 L50,28 Z" fill="#e0f2fe" stroke="#38bdf8" strokeWidth="0.5" /><path d="M42,38 L58,38" stroke="#38bdf8" strokeWidth="0.5" opacity="0.5" /></g><path d="M30,20 L32,25 L30,30 L28,25 Z" fill="#fff" className="animate-ping" /><path d="M70,20 L72,25 L70,30 L68,25 Z" fill="#fff" className="animate-ping delay-100" /></svg>;
+            }
+            return null;
+        };
+
+        const Particles = ({ type }) => {
+            const items = useMemo(() => [...Array(20)], []);
+            return (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+                    {items.map((_, i) => {
+                        const left = `${Math.random() * 100}%`;
+                        const delay = `${Math.random() * 5}s`;
+                        const duration = `${3 + Math.random() * 5}s`;
+                        if (type === 'snow') return <div key={i} className="absolute w-2 h-2 bg-white rounded-full opacity-80" style={{ left, top: '-10px', animation: `fall ${duration} linear infinite ${delay}` }} />;
+                        if (type === 'rain') return <div key={i} className="absolute w-[1px] h-4 bg-blue-300 opacity-60" style={{ left, top: '-10px', animation: `rain ${0.5 + Math.random()}s linear infinite` }} />;
+                        if (type === 'hearts') return <Heart key={i} size={16} className="absolute text-pink-500 opacity-60" style={{ left, bottom: '-20px', animation: `floatUp ${duration} ease-in infinite ${delay}` }} />;
+                        return null;
+                    })}
+                </div>
+            );
+        };
+
+        const Crowd = ({ type }) => {
+            if (!type) return null;
+            if (type === 'STUDENTS') return <div className="absolute bottom-24 inset-x-0 flex justify-between px-10 z-10 pointer-events-none">{[...Array(6)].map((_, i) => <div key={i} className="w-16 h-24 opacity-60 transform scale-90"><Character type={i % 2 === 0 ? "guest_m" : "guest_f"} variant="blue" /></div>)}</div>;
+            if (type === 'WEDDING') return <div className="absolute bottom-24 inset-x-0 flex justify-around px-4 z-10 pointer-events-none">{[...Array(8)].map((_, i) => <div key={i} className="w-16 h-24 opacity-80 transform scale-90"><Character type={i % 2 === 0 ? "guest_m" : "guest_f"} variant={i % 2 === 0 ? "blue" : "pink"} /></div>)}</div>;
+            return null;
+        };
+
+        const AtmosphereSystem = ({ type, mouseX = 0, mouseY = 0 }) => {
+            const bgX = (mouseX / window.innerWidth) * 20; 
+            let lightingClass = "mix-blend-normal"; 
+            let particles = null;
+            let crowdType = null;
+            let bgComponent = null;
+
+            if (type === 'LIVING_ROOM') {
+                lightingClass = "bg-yellow-500 mix-blend-overlay opacity-10"; 
+                bgComponent = <div className="absolute inset-0 bg-[#fef3c7] overflow-hidden"><div className="absolute top-0 w-full h-1/2 bg-[#fde68a]"></div><div className="absolute bottom-0 w-full h-1/3 bg-[#d97706] border-t-8 border-[#92400e]"></div><div className="absolute top-10 left-10 w-32 h-32 bg-blue-300 border-4 border-white shadow-inner" style={{ transform: `translate(${bgX}px, 0)` }}><div className="w-full h-full bg-gradient-to-b from-blue-300 to-blue-100 opacity-50"></div><div className="absolute bottom-0 w-full h-1 bg-white"></div><div className="absolute top-0 bottom-0 left-1/2 w-1 bg-white"></div></div><div className="absolute top-20 right-20 w-48 h-32 flex flex-col items-center" style={{ transform: `translate(${bgX * 1.5}px, 0)` }}><div className="w-40 h-24 bg-black border-4 border-gray-700 rounded-lg"></div><div className="w-48 h-8 bg-[#78350f] rounded-sm mt-1"></div></div><div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-[#7c2d12] rounded-t-xl border-t-4 border-[#92400e]"></div></div>;
+            }
+            else if (type === 'CAFE_REAL') {
+                lightingClass = "bg-amber-100 mix-blend-multiply opacity-20";
+                crowdType = 'STUDENTS';
+                bgComponent = <div className="absolute inset-0 bg-amber-50 overflow-hidden"><div className="absolute top-20 left-0 w-full h-40 bg-white border-b-8 border-gray-300 flex justify-around items-end pb-2" style={{ transform: `translate(${bgX * 0.5}px, 0)` }}><div className="w-1/4 h-20 bg-gray-200 border-2 border-gray-400 rounded-t-lg"></div><div className="w-1/4 h-20 bg-gray-200 border-2 border-gray-400 rounded-t-lg"></div><div className="absolute top-5 left-1/2 -translate-x-1/2 w-48 h-16 bg-black border-4 border-gray-600 flex items-center justify-center"><div className="space-y-1 w-full px-2"><div className="h-1 bg-white opacity-50 w-full"></div><div className="h-1 bg-white opacity-50 w-2/3"></div><div className="h-1 bg-white opacity-50 w-3/4"></div></div></div></div><div className="absolute bottom-32 left-10 w-40 h-20 bg-amber-800 rounded-lg transform skew-x-12 shadow-lg" style={{ transform: `translate(${bgX}px, 0)` }}><div className="absolute -top-4 left-4 w-32 h-4 bg-amber-900 rounded"></div></div><div className="absolute bottom-32 right-10 w-40 h-20 bg-amber-800 rounded-lg transform -skew-x-12 shadow-lg" style={{ transform: `translate(${bgX}px, 0)` }}><div className="absolute -top-4 right-4 w-32 h-4 bg-amber-900 rounded"></div></div><div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-2/3 h-32 bg-amber-900 rounded-t-3xl border-t-8 border-amber-950 shadow-2xl"><div className="absolute -top-4 left-1/4 w-6 h-8 bg-white rounded-b-md border-t-2 border-gray-200"></div><div className="absolute -top-4 right-1/4 w-6 h-8 bg-white rounded-b-md border-t-2 border-gray-200"></div></div></div>;
+            }
+            else if (type && type.includes('CAFE')) {
+                lightingClass = "bg-orange-300 mix-blend-overlay opacity-20"; 
+                let decor = null;
+                if (type === 'CAFE_MEXICAN') {
+                    decor = <><div className="absolute top-0 w-full h-10 flex justify-around">{[...Array(10)].map((_, i) => <div key={i} className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[20px] border-t-red-500"></div>)}</div><div className="absolute bottom-32 right-10 w-20 h-20 bg-green-600 rounded-full opacity-20 blur-sm"></div></>;
+                } else if (type === 'CAFE_ITALIAN') {
+                    decor = <div className="absolute top-20 left-20 w-8 h-20 bg-red-800 rounded-b-lg opacity-50"></div>;
+                } else { crowdType = 'STUDENTS'; }
+                bgComponent = <div className={`absolute inset-0 ${type === 'CAFE_DATE' ? 'bg-[#5d4037]' : 'bg-[#3e2723]'} overflow-hidden`}><div className="absolute top-10 left-10 w-1/3 h-40 bg-blue-300 border-8 border-[#2e1005] overflow-hidden rounded-lg" style={{ transform: `translate(${bgX}px, 0)` }}><div className={`w-full h-full ${type === 'CAFE_AUTUMN' ? 'bg-orange-300' : 'bg-blue-300'}`}></div></div>{decor}<div className="absolute -bottom-10 right-0 w-2/3 h-40 bg-[#8d6e63] rounded-tl-full border-l-8 border-[#5d4037] shadow-2xl">{type === 'CAFE_MEXICAN' && <div className="absolute top-10 left-20 w-16 h-8 bg-yellow-400 rounded-full border-b-4 border-yellow-600"></div>}{type === 'CAFE_ITALIAN' && <div className="absolute top-10 left-20 w-20 h-2 bg-yellow-200 rounded-full border-4 border-red-500"></div>}</div></div>;
+            }
+            else if (type === 'MOVIE') {
+                lightingClass = "bg-blue-900 mix-blend-multiply opacity-60";
+                bgComponent = <div className="absolute inset-0 bg-[#0f0f1a] flex flex-col items-center"><div className="w-3/4 h-2/3 bg-white shadow-[0_0_50px_rgba(255,255,255,0.2)] mt-10 rounded"></div><div className="absolute bottom-0 w-full h-1/3 bg-[#1a1a2e] flex justify-center gap-1 pt-4">{[...Array(8)].map((_,i) => <div key={i} className="w-16 h-24 bg-red-900 rounded-t-xl border-t-2 border-red-700"></div>)}</div></div>;
+            }
+            else if (type === 'AUDITORIUM') {
+                lightingClass = "bg-blue-900 mix-blend-multiply opacity-40"; crowdType = 'STUDENTS';
+                bgComponent = <div className="absolute inset-0 bg-[#1a1a2e] flex flex-col items-center"><div className="w-full h-2/3 bg-[#0f0f1a] border-b-4 border-gray-700"></div><div className="absolute bottom-0 w-full h-1/3 bg-[#2c2c3e] flex justify-center gap-2 pt-10" style={{ transform: `translate(${bgX}px, 0)` }}>{[...Array(6)].map((_,i) => <div key={i} className="w-16 h-24 bg-red-900 rounded-t-xl border-t border-red-700 shadow-lg"></div>)}</div><div className="absolute top-0 right-20 w-20 h-full bg-yellow-100 opacity-5 rotate-12 blur-2xl"></div></div>;
+            }
+            else if (type === 'HIMALAYAS') {
+                lightingClass = "bg-blue-200 mix-blend-soft-light opacity-30"; particles = 'snow';
+                bgComponent = <div className="absolute inset-0 bg-blue-200"><div className="absolute bottom-0 w-full h-2/3 bg-white skew-y-6 origin-bottom-left" style={{ transform: `translate(${bgX}px, 0)` }}></div><div className="absolute bottom-0 w-full h-1/2 bg-slate-200 -skew-y-6 origin-bottom-right opacity-60" style={{ transform: `translate(${bgX * 0.5}px, 0)` }}></div><div className="absolute top-10 left-20 w-24 h-24 bg-yellow-100 rounded-full blur-2xl"></div></div>;
+            }
+            else if (type === 'MARRIAGE' || type === 'WEDDING_RICH') {
+                lightingClass = "bg-red-200 mix-blend-overlay opacity-20"; particles = 'hearts'; crowdType = 'WEDDING';
+                bgComponent = <div className="absolute inset-0 bg-red-50"><div className="absolute top-0 w-full h-32 bg-orange-100 flex justify-around items-end pb-4 border-b-4 border-orange-300"><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div></div><div className="absolute top-0 w-full h-10 bg-orange-500 flex justify-around">{[...Array(12)].map((_,i) => <div key={i} className="w-6 h-12 bg-yellow-400 rounded-b-full border-2 border-red-500"></div>)}</div></div>;
+            }
+            else if (type === 'COLLEGE') {
+                lightingClass = "bg-blue-100 mix-blend-soft-light opacity-10"; crowdType = 'STUDENTS';
+                bgComponent = <div className="absolute inset-0 bg-slate-200"><div className="absolute bottom-0 w-full h-32 bg-green-700 border-t-4 border-green-800"></div><div className="absolute top-20 left-20 w-64 h-64 bg-red-900 rounded-lg shadow-xl grid grid-cols-4 gap-2 p-4" style={{ transform: `translate(${bgX}px, 0)` }}>{[...Array(12)].map((_,i) => <div key={i} className="bg-blue-200 w-full h-full rounded border border-blue-300 shadow-inner"></div>)}</div></div>;
+            }
+            else if (type === 'HOME_GURGAON') {
+                lightingClass = "bg-indigo-900 mix-blend-multiply opacity-50"; particles = 'rain';
+                bgComponent = <div className="absolute inset-0 bg-indigo-950"><div className="absolute bottom-0 w-full h-32 bg-gray-800 border-t border-gray-600"></div><div className="absolute top-20 right-40 w-48 h-32 flex flex-col items-center" style={{ transform: `translate(${bgX}px, 0)` }}><div className="w-48 h-28 bg-black border-4 border-gray-700 rounded-lg relative overflow-hidden shadow-[0_0_15px_rgba(59,130,246,0.3)]"><div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-black opacity-80"></div><div className="absolute bottom-2 right-2 w-1 h-1 bg-red-500 rounded-full animate-pulse"></div></div><div className="w-32 h-6 bg-gray-800 mt-2 rounded flex items-center justify-center border-t border-gray-600"><div className="w-16 h-1 bg-green-500 rounded-full shadow-[0_0_5px_rgba(34,197,94,0.8)]"></div></div></div></div>;
+            }
+            else { bgComponent = <div className="absolute inset-0 bg-black"></div>; }
+
+            return <div className="absolute inset-0 overflow-hidden">{bgComponent}<Crowd type={crowdType} /><div className={`absolute inset-0 pointer-events-none z-40 ${lightingClass}`}></div>{particles && <Particles type={particles} />}</div>;
+        };
+
+        const Typewriter = ({ text, onComplete, isFastForwarding }) => {
+            const [charIndex, setCharIndex] = useState(0);
+            useEffect(() => { setCharIndex(0); }, [text]);
+            useEffect(() => {
+                if (isFastForwarding) { setCharIndex(text.length); onComplete?.(); return; }
+                if (charIndex < text.length) {
+                    const timeout = setTimeout(() => { setCharIndex((prev) => prev + 1); if (charIndex % 3 === 0) SoundManager.type(); }, 30);
+                    return () => clearTimeout(timeout);
+                } else { if(charIndex === text.length) onComplete?.(); }
+            }, [charIndex, isFastForwarding, text, onComplete]);
+            return <p className="leading-relaxed font-pixel text-xs md:text-sm lg:text-base whitespace-pre-wrap tracking-wide">{text.slice(0, charIndex)}</p>;
+        };
+
+        const AudioController = ({ isMuted, track, shouldPlay }) => {
+            const audioRef = useRef(null);
+            useEffect(() => {
+                if (audioRef.current) {
+                    audioRef.current.volume = isMuted ? 0 : 0.3;
+                    if (shouldPlay) { audioRef.current.play().catch(e => console.log("Autoplay blocked")); }
+                }
+            }, [isMuted, track, shouldPlay]);
+            return <audio ref={audioRef} src={track} loop />;
+        };
+
+        // --- COMPONENTS ---
+        const HighlightsMode = ({ story, onBack }) => {
+            const [idx, setIdx] = useState(0);
+            const scenes = useMemo(() => {
+                return Object.values(story).flat().filter(s => 
+                    s.type !== 'CHOICE' && 
+                    s.type !== 'PROPOSAL_TRANSITION' && 
+                    s.bg !== 'LIVING_ROOM' && 
+                    s.type !== 'NARRATOR'
+                );
+            }, [story]);
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setIdx(prev => (prev + 1) % scenes.length);
+                }, 1000); 
+                return () => clearInterval(interval);
+            }, [scenes.length]);
+
+            if (scenes.length === 0) return null;
+
+            return (
+                <div className="w-full h-full relative">
+                    <GameScene scene={scenes[idx]} onHome={onBack} isTypingComplete={true} hideUI={true} mousePos={{x:0, y:0}} />
+                    <div className="absolute top-4 right-4 z-50">
+                        <button onClick={onBack} className="bg-black/50 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm">
+                            <Home size={20} />
+                        </button>
+                    </div>
+                    <div className="absolute bottom-8 left-0 w-full text-center pointer-events-none z-50">
+                        <p className="font-pixel text-xs text-white drop-shadow-md opacity-80 animate-pulse">HIGHLIGHTS REEL</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const ProposalScene = ({ mousePos, onReset }) => {
+            const [ringOpen, setRingOpen] = useState(false);
+            const [textRevealed, setTextRevealed] = useState(false);
+            
+            useEffect(() => { 
+                if (ringOpen && !textRevealed) { 
+                    SoundManager.success(); 
+                    setTextRevealed(true); 
+                } 
+            }, [ringOpen, textRevealed]);
+
+            return (
+                <div className="w-full h-full relative flex flex-col">
+                    <AtmosphereSystem type="CAFE_DATE" mouseX={mousePos.x} mouseY={mousePos.y} />
+                    <div className="flex-1 relative z-30 flex items-end justify-center gap-8 px-8 pb-4">
+                        <div className="w-24 h-24 md:w-40 md:h-40 relative"><Character type="aman" variant="young" /></div>
+                        <div className="flex flex-col items-center mb-8 relative z-40 group cursor-pointer transition-transform hover:scale-105" onClick={() => setRingOpen(true)}>
+                            <div className="w-32 h-32 md:w-48 md:h-48 relative"><Character type="ring_box" variant={ringOpen ? "open" : "closed"} /></div>
+                            <div className="mt-2 bg-black/70 px-2 py-1 rounded border border-yellow-500 text-center animate-fade-in-up">
+                                <p className="font-pixel text-[8px] text-yellow-400">ITEM: WORLD'S MOST EXPENSIVE</p>
+                                <p className="font-pixel text-[8px] text-yellow-400">GAMING NATURAL DIAMOND RING</p>
+                                {!ringOpen && <p className="font-pixel text-[6px] text-white animate-pulse mt-1">CLICK TO OPEN</p>}
+                            </div>
+                        </div>
+                        <div className="w-24 h-24 md:w-40 md:h-40 relative"><Character type="sneha" variant="default" /></div>
+                    </div>
+                    <div className="h-44 md:h-40 bg-slate-900 border-t-4 border-white p-4 relative z-50 flex flex-col shadow-lg">
+                        <div className="absolute -top-3 left-4 bg-pink-600 text-white font-pixel text-[10px] px-2 py-1 border border-white rounded uppercase">AMAN</div>
+                        <div className="flex-1 text-white font-pixel mt-2 flex flex-col items-center justify-center text-center">
+                            {!ringOpen ? 
+                                <Typewriter text="Sneha, this story is not set in stone. This is the life I *want* with you. All those moments, the fights, the love... lead to this." /> 
+                                : 
+                                <div className="animate-fade-in flex flex-col items-center gap-2">
+                                    <h1 className="text-yellow-400 text-sm md:text-lg leading-relaxed">SNEHA, WILL YOU MARRY ME?</h1>
+                                    <p className="text-xs text-white">"I love you."</p>
+                                    <button onClick={onReset} className="mt-2 text-[8px] text-slate-500 hover:text-white flex items-center gap-1"><RotateCcw size={10} /> RESTART STORY</button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const GameScene = ({ scene, mousePos, onNext, onBack, onTrap, isTypingComplete, onTypingEnd, onHome, isRewinding = false, hideUI = false }) => {
+            const renderChars = () => {
+                if (!scene.characters) return null;
+                return (
+                    <div className="flex items-end justify-center gap-8 md:gap-16 w-full h-full pb-4 md:pb-8 px-8" style={{ transform: `translateX(${(mousePos.x / window.innerWidth) * -40}px)` }}>
+                        {scene.characters.map((char, idx) => {
+                            let type = char;
+                            let variant = 'default';
+                            if (char === 'aman_young') { type = 'aman'; variant = 'young'; }
+                            else if (char === 'sneha_nerdy') { type = 'sneha'; variant = 'nerdy'; }
+                            else if (char === 'sneha_stunning') { type = 'sneha'; variant = 'default'; }
+                            else if (char === 'sneha_bride') { type = 'sneha'; variant = 'bride'; }
+                            else if (char === 'dad') { type = 'dad'; }
+                            else if (char === 'mom') { type = 'mom'; }
+                            
+                            return (
+                                <div key={idx} className={`w-24 h-24 md:w-40 md:h-40 relative`}>
+                                     <Character type={type} variant={variant} />
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            };
+
+            return (
+                <div className="w-full h-full relative flex flex-col">
+                    <AtmosphereSystem type={scene.bg} mouseX={mousePos.x} mouseY={mousePos.y} />
+                    <div className="flex-1 relative z-30 flex items-end justify-center">
+                         {renderChars()}
+                    </div>
+                    {isRewinding && <div className="absolute inset-0 bg-indigo-500 opacity-20 z-40 flex items-center justify-center pointer-events-none"><Rewind className="text-white w-20 h-20 animate-spin" /></div>}
+                    {scene.effect === 'spotlight' && <div className="absolute inset-0 bg-black/80 z-40 pointer-events-none"><div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-200/10 rounded-full blur-2xl"></div></div>}
+
+                    {!hideUI && !isRewinding && (
+                        <div className="h-44 md:h-40 bg-slate-900 border-t-4 border-white p-4 relative z-50 flex flex-col shadow-lg">
+                            <button onClick={onHome} className="absolute -top-10 right-0 bg-slate-700 p-2 text-white rounded hover:bg-slate-600"><Home size={16}/></button>
+                            <div className="absolute -top-3 left-4 bg-pink-600 text-white font-pixel text-[10px] px-2 py-1 border border-white rounded uppercase">{scene.speaker || 'NARRATOR'}</div>
+                            <div className="flex-1 text-white font-pixel mt-2">
+                                {scene.type === 'CHOICE' ? (
+                                    <div className="flex flex-col items-center gap-4 mt-2 animate-fade-in">
+                                        <p className="text-yellow-300 text-xs text-center">{scene.text}</p>
+                                        <div className="flex gap-4">
+                                            {scene.options.map((opt, i) => (
+                                                <button key={i} onClick={() => opt.action === 'next' ? onNext() : onTrap(opt.action)} onMouseEnter={SoundManager.hover} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-xs border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 rounded transition-all">{opt.label}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Typewriter text={scene.text} onComplete={onTypingEnd} isFastForwarding={isTypingComplete} />
+                                )}
+                            </div>
+                            <div className="absolute bottom-3 left-3 flex gap-2"><div className="text-slate-400 hover:text-white cursor-pointer" onClick={onBack}><ChevronLeft size={24} /></div></div>
+                            {scene.type !== 'CHOICE' && <div className={`absolute bottom-3 right-3 text-yellow-400 animate-bounce cursor-pointer ${!isTypingComplete ? 'opacity-50' : 'opacity-100'}`} onClick={onNext}><ChevronRight size={24} /></div>}
+                            {!isTypingComplete && scene.type !== 'CHOICE' && <div className="absolute inset-0 z-50 cursor-pointer" onClick={onTypingEnd}></div>}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const BadEndingScreen = ({ type, onReset }) => {
+            const isMarriageTrap = type === 'trap_marriage';
+            return (
+                <div className="w-full h-full bg-black flex flex-col items-center justify-center p-8 text-center text-red-600 animate-pulse font-pixel z-50 absolute inset-0">
+                    <h1 className="text-2xl mb-4">WRONG CHOICE!</h1>
+                    {isMarriageTrap ? (
+                        <>
+                            <div className="w-48 h-48 relative mb-8"><Character type="sneha" variant="rich_girl" /></div>
+                            <p className="text-xs text-white mb-4">Sneha married a girl with PAISA, GAADI, MEHENGA GHAR.</p>
+                        </>
+                    ) : (
+                        <>
+                              <div className="w-48 h-48 relative mb-8">
+                                  <div className="absolute inset-0 -z-10"><AtmosphereSystem type="HIMALAYAS" /></div>
+                                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-32"><Character type="aman" variant="himalaya" /></div>
+                              </div>
+                              <p className="text-xs text-white mb-4">"I became a monk in the Himalayas. You kids were found in a basket."</p>
+                        </>
+                    )}
+                    <p className="text-[10px] text-white mb-8">NO KYUN CLICK KIYA MOTI?!</p>
+                    <button onClick={onReset} className="px-6 py-3 bg-red-800 text-white text-xs border border-red-500 hover:bg-red-700">TRY AGAIN</button>
+                </div>
+            );
+        };
+
+        const TitleScreen = ({ onStart, onHighlights, onMeet }) => (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-purple-800 to-indigo-900 text-white p-8 text-center relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+                <Heart className="w-16 h-16 text-red-500 fill-current animate-bounce mb-4 z-10" />
+                <h1 className="font-pixel text-xl md:text-3xl text-yellow-300 drop-shadow-md mb-8 leading-relaxed z-10">HOW I MET<br/>MY BABU</h1>
+                
+                <div className="flex flex-col gap-4 z-10">
+                    <button onClick={onStart} onMouseEnter={SoundManager.hover} className="px-8 py-3 bg-yellow-400 text-black font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-yellow-600 rounded flex items-center justify-center gap-2 shadow-lg">
+                        <Play size={16} /> PLAY STORY
+                    </button>
+                    <button onClick={onMeet} onMouseEnter={SoundManager.hover} className="px-8 py-3 bg-blue-500 text-white font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-blue-700 rounded flex items-center justify-center gap-2 shadow-lg">
+                        <Users size={16} /> MEET THE CAST
+                    </button>
+                    <button onClick={onHighlights} onMouseEnter={SoundManager.hover} className="px-8 py-3 bg-pink-500 text-white font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-pink-700 rounded flex items-center justify-center gap-2 shadow-lg">
+                        <Music size={16} /> HIGHLIGHTS
+                    </button>
+                </div>
+            </div>
+        );
+
+        const CharacterScreen = ({ chars, onBack }) => (
+            <div className="w-full h-full bg-slate-800 p-6 flex flex-col items-center">
+                <h2 className="font-pixel text-yellow-400 mb-6 text-center text-sm">MEET THE CAST</h2>
+                <div className="flex-1 w-full max-w-2xl overflow-y-auto pb-20 scrollbar-hide">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {chars.map(char => (
+                            <div key={char.id} className="bg-slate-700 p-4 rounded border border-slate-600 flex gap-4 items-center transform hover:scale-105 transition-transform">
+                                <div className="w-20 h-20 flex-shrink-0 bg-slate-800 rounded p-1"><Character type={char.type} variant={char.variant} /></div>
+                                <div className="text-left">
+                                    <h3 className="font-pixel text-xs text-pink-300 mb-1">{char.name}</h3>
+                                    <p className="font-pixel text-[8px] text-yellow-500 mb-2">{char.sub}</p>
+                                    <p className="font-sans text-[10px] text-slate-300 leading-tight">{char.desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <button onClick={onBack} onMouseEnter={SoundManager.hover} className="absolute bottom-6 px-6 py-2 bg-red-500 text-white font-pixel text-xs border-b-4 border-red-700 rounded animate-pulse">BACK TO MENU</button>
+            </div>
+        );
+
+        const ChapterSelect = ({ chapters, onSelect }) => {
+            const titles = {
+                1: "The Beginning",
+                2: "Long Distance",
+                3: "Work & Wanderlust",
+                4: "The Big Decision"
+            };
+
+            const ChapterThumb = ({ id }) => {
+                if (id === 1) return (
+                    <svg viewBox="0 0 100 100" className="w-12 h-12 mb-2 opacity-80">
+                        <rect x="20" y="20" width="60" height="60" fill="#3b82f6" rx="2" />
+                        <path d="M50,10 L20,30 L80,30 Z" fill="#1e3a8a" /> 
+                        <rect x="45" y="60" width="10" height="20" fill="#1e293b" /> 
+                    </svg>
+                );
+                if (id === 2) return (
+                    <svg viewBox="0 0 100 100" className="w-12 h-12 mb-2 opacity-80">
+                        <rect x="30" y="20" width="40" height="70" rx="4" fill="#334155" stroke="#94a3b8" strokeWidth="2" />
+                        <rect x="35" y="25" width="30" height="50" fill="#0ea5e9" /> 
+                        <circle cx="50" cy="85" r="2" fill="#94a3b8" />
+                    </svg>
+                );
+                if (id === 3) return (
+                    <svg viewBox="0 0 100 100" className="w-12 h-12 mb-2 opacity-80">
+                        <path d="M20,30 L80,30 L70,80 L30,80 Z" fill="#fbbf24" /> 
+                        <path d="M25,30 Q10,30 25,50" fill="none" stroke="#fbbf24" strokeWidth="4" />
+                        <path d="M40,20 Q50,10 60,20" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" />
+                    </svg>
+                );
+                if (id === 4) return (
+                    <svg viewBox="0 0 100 100" className="w-12 h-12 mb-2 opacity-80">
+                        <circle cx="50" cy="50" r="20" fill="none" stroke="#fcd34d" strokeWidth="4" />
+                        <circle cx="50" cy="30" r="6" fill="#e0f2fe" /> 
+                    </svg>
+                );
+                return null;
+            };
+
+            return (
+                <div className="w-full h-full bg-indigo-900 p-8 flex flex-col items-center justify-center">
+                    <h2 className="font-pixel text-white mb-8">SELECT CHAPTER</h2>
+                    <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
+                        {chapters.map(idStr => {
+                            const id = parseInt(idStr);
+                            return (
+                                <button 
+                                    key={id} 
+                                    onClick={() => onSelect(id)} 
+                                    onMouseEnter={SoundManager.hover} 
+                                    className="h-32 bg-indigo-800 hover:bg-indigo-700 border-4 border-indigo-500 rounded-lg flex flex-col items-center justify-center text-white transition-transform hover:scale-105 shadow-lg group"
+                                >
+                                    <ChapterThumb id={id} />
+                                    <span className="font-pixel text-[10px] text-indigo-300 mb-1">CHAPTER {id}</span>
+                                    <span className="font-pixel text-[8px] text-white group-hover:text-yellow-300">{titles[id]}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        function App() {
+            const [view, setView] = useState("TITLE"); 
+            const [currentChapter, setCurrentChapter] = useState(0);
+            const [sceneIndex, setSceneIndex] = useState(0);
+            const [isMuted, setIsMuted] = useState(false);
+            const [isTypingComplete, setIsTypingComplete] = useState(false);
+            const [flags, setFlags] = useState({ badEnding: false, trapType: null });
+            const [history, setHistory] = useState([]); 
+            const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+            const [isRewinding, setIsRewinding] = useState(false);
+            const [rewindIndex, setRewindIndex] = useState(0);
+            const [hasInteracted, setHasInteracted] = useState(false);
+
+            const CHARACTERS = [
+                { id: 'aman', name: 'Aman', sub: 'Agent Potbelly', desc: 'The narrator. Loves giving lectures to kids.', type: 'aman', variant: 'potbelly' },
+                { id: 'sneha', name: 'Sneha', sub: 'The Heroine', desc: 'Bollywood lover. Secretly a coding genius.', type: 'sneha', variant: 'default' },
+                { id: 'siya', name: 'Siya', sub: 'The Eldest', desc: 'Cute, smart, and asks too many logical questions.', type: 'siya' },
+                { id: 'ezio', name: 'Ezio', sub: 'The Assassin', desc: 'Gamer kid. Named after something Sneha hates.', type: 'ezio' }
+            ];
+
+            const STORY = {
+                1: [
+                    { bg: 'LIVING_ROOM', speaker: 'NARRATOR', text: "One day, at a certain house in Faridabad..." },
+                    { bg: 'LIVING_ROOM', speaker: 'EZIO', text: "Dad, Dad! Tell us how you and Mumma met!", characters: ['ezio', 'siya'] },
+                    { bg: 'LIVING_ROOM', speaker: 'SIYA', text: "Mumma said she said 'No' first.", characters: ['ezio', 'siya'] },
+                    { bg: 'LIVING_ROOM', speaker: 'EZIO', text: "But you said 'Please'!", characters: ['ezio', 'siya'] },
+                    { bg: 'LIVING_ROOM', speaker: 'SIYA', text: "Mumma ne bola No.", characters: ['ezio', 'siya'] },
+                    { bg: 'LIVING_ROOM', speaker: 'EZIO', text: "Aapne bola Please.", characters: ['ezio', 'siya'] },
+                    { bg: 'LIVING_ROOM', speaker: 'BOTH', text: "Ab koi ek taang pe khada ho jaye to aap kya kar sakte hain!", characters: ['ezio', 'siya'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Hahaha, okay okay sit down monsters. Let me tell you the real story.", characters: ['aman', 'ezio', 'siya'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "It starts back when I had a head full of hair. I was... pretty popular.", characters: ['aman_young'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "And your mom... err... let's say she was very studious.", characters: ['sneha_nerdy'] },
+                    { bg: 'LIVING_ROOM', speaker: 'SIYA', text: "Lekin mumma ki Hindi to kitni kharab hai...", characters: ['siya', 'ezio'] },
+                    { bg: 'LIVING_ROOM', speaker: 'EZIO', text: "English kaunsa achhi hai!", characters: ['siya', 'ezio'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Haha true but FOCUS!", characters: ['aman'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "We both ended up in JIIT. Roles reversed. I was a gamer boy. She was stunning.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_REAL', speaker: 'AMAN', text: "Then it happened. First year. The College Cafe.", characters: ['aman_young'] },
+                    { bg: 'CAFE_REAL', speaker: 'AMAN', text: "I saw her for the first time.", effect: 'spotlight', characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_REAL', speaker: 'AMAN', text: "The world dimmed. My focus was only on her.", effect: 'spotlight', characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'AUDITORIUM', speaker: 'AMAN', text: "I didn't know her name. Then one day, a presentation in the auditorium.", characters: ['aman_young'] },
+                    { bg: 'AUDITORIUM', speaker: 'AMAN', text: "I heard a cute voice. She was wearing a hat. Later I realized it was her.", characters: ['sneha_stunning'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "Seasons changed. 2 years passed. I kept looking at her in different clothes.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "Finally, 3rd year. I sent a request on Instagram.", characters: ['aman_young'] },
+                    { bg: 'LIVING_ROOM', speaker: 'SIYA', text: "So this was the first time you sent a request?", characters: ['siya'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "(Err... I sent one before but she removed me.) Yes! She accepted immediately.", characters: ['aman_young'] },
+                    { bg: 'CAFE_DATE', speaker: 'AMAN', text: "We started chatting. 'Hey, you look cute'. 'Thank you'.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_DATE', speaker: 'AMAN', text: "I panicked. 'Okay talk after exams'. She was shocked.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "She was shocked because she was amazed by me, obviously.", characters: ['aman'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "She messaged after exams. We chatted every night.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_DATE', speaker: 'AMAN', text: "Finally, I asked her out. Our first date.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_DATE', speaker: 'AMAN', text: "I wore blue. She wore brown. My cheeks were red.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_DATE', speaker: 'AMAN', text: "I said 'Humko nervousness hora'. But we had a great time.", characters: ['aman_young', 'sneha_stunning'] },
+                ],
+                2: [
+                    { bg: 'LIVING_ROOM', speaker: 'KIDS', text: "Wow... so romantic!", characters: ['siya', 'ezio'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Then it happened. Something none of us expected.", characters: ['aman'] },
+                    { bg: 'LIVING_ROOM', speaker: 'KIDS', text: "What? Covid?", characters: ['siya', 'ezio'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "No. Long Distance Relationship.", characters: ['aman'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "We grew close over text. Day and night.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "March 26th. Late night. We confessed.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "I went to drink water. Came back. Sent the proposal text.", characters: ['aman_young'] },
+                    { type: 'CHOICE', bg: 'HOME_GURGAON', text: "What did Sneha say?", options: [{ label: "YES! Of course", action: 'next' }, { label: "NO...", action: 'trap_himalaya' }] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Well, she didn't say it back that night. But next day she was all in.", characters: ['aman'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "I told my parents. My sister Bittu was excited.", characters: ['aman_young'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Love made it work. Fights, jealousy, waiting for texts.", characters: ['aman'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "Once she didn't talk for a month due to GATE exams.", characters: ['aman_young'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "I uploaded her exam papers! She passed college because of me.", characters: ['aman'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "First meeting after lockdown: Degree collection.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'COLLEGE', speaker: 'AMAN', text: "I tried to hold her hand... she refused! 'Public place'.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "But she gave me this black hoodie. Best gift ever.", characters: ['aman'] },
+                    { bg: 'CAFE_DATE', speaker: 'AMAN', text: "We had burgers. It was perfect.", characters: ['aman_young', 'sneha_stunning'] },
+                ],
+                3: [
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Then we got jobs. Her in Expedia, me in Deloitte.", characters: ['aman'] },
+                    { bg: 'LIVING_ROOM', speaker: 'EZIO', text: "Mumma in Expedia? Where are our coupons?", characters: ['ezio'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Expedia deepened our love... because of the included Stocks.", characters: ['aman'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "Gurgaon days. We visited cafes all over the city.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_MEXICAN', speaker: 'AMAN', text: "We went to Taco Bell.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_MEXICAN', speaker: 'SNEHA', text: "I remember! You dropped salsa on your new shirt.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_ITALIAN', speaker: 'AMAN', text: "Then the fancy Italian place.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'CAFE_ITALIAN', speaker: 'AMAN', text: "I couldn't even pronounce the pasta names!", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'MOVIE', speaker: 'AMAN', text: "We spent hours in movie theaters.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'MOVIE', speaker: 'AMAN', text: "Honestly, I spent more time looking at you than the screen.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "Then came the day you visited my apartment for the first time.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'HOME_GURGAON', speaker: 'SNEHA', text: "It was surprisingly clean for a guy's room.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "Only because I cleaned for 3 hours before you came!", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "You made the first move.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "That was the night Siya was conceived... JUST KIDDING!", characters: ['aman'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "Then I had to leave for my MBA. New city.", characters: ['aman_young'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "Long distance again. It was hard, but our love never changed.", characters: ['aman_young', 'sneha_stunning'] },
+                ],
+                4: [
+                    { bg: 'LIVING_ROOM', speaker: 'SIYA', text: "So you came back to Gurgaon?", characters: ['siya'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Yes. Job was hectic. We fought. Breakups. Blame games.", characters: ['aman'] },
+                    { bg: 'HOME_GURGAON', speaker: 'AMAN', text: "We hugged and said never again. Then fought again in long distance.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Finally, we decided. No more waiting.", characters: ['aman'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "We picked the date ourselves first: Feb 21, 2026.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "Then came the scary part. Telling the parents.", characters: ['aman'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "You went to tell your Mom and Dad. I was pacing in my room.", characters: ['aman_young', 'dad', 'mom'] },
+                    { bg: 'LIVING_ROOM', speaker: 'SNEHA', text: "I told them everything. About us. About the date.", characters: ['sneha_stunning', 'dad', 'mom'] },
+                    { type: 'CHOICE', bg: 'LIVING_ROOM', text: "Did they agree?", options: [{ label: "YES", action: 'next' }, { label: "NO", action: 'trap_marriage' }] },
+                    { bg: 'MARRIAGE', speaker: 'AMAN', text: "They said YES! Families met. It was official.", characters: ['aman_young', 'sneha_bride'] },
+                    { bg: 'MARRIAGE', speaker: 'AMAN', text: "We got a house. Had you monsters.", characters: ['aman_young', 'sneha_stunning'] },
+                    { bg: 'LIVING_ROOM', speaker: 'AMAN', text: "And that, kids, is how I met your Babu... I mean, your mother.", characters: ['aman'] },
+                    { type: 'PROPOSAL_TRANSITION', bg: 'black', text: "Wait... let's rewind." }
+                ]
+            };
+
+            const handleStart = () => { SoundManager.init(); SoundManager.click(); setHasInteracted(true); setView('CHAPTERS'); };
+            const handleChapterSelect = (id) => { SoundManager.click(); setCurrentChapter(id); setSceneIndex(0); setView('GAME'); };
+            const handleNext = () => {
+                if (!isTypingComplete) { setIsTypingComplete(true); return; }
+                SoundManager.click();
+                const currentSceneData = STORY[currentChapter][sceneIndex];
+                if (currentSceneData.type !== 'CHOICE' && currentSceneData.type !== 'PROPOSAL_TRANSITION') setHistory(prev => [...prev, currentSceneData]);
+                const currentSceneList = STORY[currentChapter];
+                if (sceneIndex >= currentSceneList.length - 1) {
+                    if (currentChapter < 4) { if (currentSceneList[sceneIndex].type === 'PROPOSAL_TRANSITION') { SoundManager.playTone(1000, 'sawtooth', 0.5); startRewind(); } else { setCurrentChapter(prev => prev + 1); setSceneIndex(0); } } else { startRewind(); }
+                } else { setSceneIndex(prev => prev + 1); }
+                setIsTypingComplete(false);
+            };
+            const handleBack = () => {
+                SoundManager.back();
+                if (sceneIndex > 0) { setSceneIndex(prev => prev - 1); setIsTypingComplete(true); } 
+                else if (currentChapter > 1) { const prevChap = currentChapter - 1; const prevChapScenes = STORY[prevChap]; if (prevChapScenes) { setCurrentChapter(prevChap); setSceneIndex(prevChapScenes.length - 1); setIsTypingComplete(true); } }
+            };
+            const startRewind = () => { setIsRewinding(true); setRewindIndex(history.length - 1); setView('REWIND_MODE'); };
+            useEffect(() => { if (view === 'REWIND_MODE' && rewindIndex >= 0) { const timer = setTimeout(() => { setRewindIndex(prev => prev - 1); }, 50); return () => clearTimeout(timer); } else if (view === 'REWIND_MODE' && rewindIndex < 0) { setView('PROPOSAL_FINAL'); setIsRewinding(false); } }, [view, rewindIndex]);
+            const handleTrap = (type) => { SoundManager.trap(); setFlags({ badEnding: true, trapType: type }); };
+            const handleTrapReset = () => { SoundManager.click(); setFlags({ badEnding: false, trapType: null }); };
+
+            let renderScene = STORY[currentChapter] ? STORY[currentChapter][sceneIndex] : null;
+            if (view === 'REWIND_MODE' && history[rewindIndex]) renderScene = history[rewindIndex];
+            
+            // Background Logic for Image (CAFE_REAL)
+            const isCafeReal = renderScene && renderScene.bg === 'CAFE_REAL';
+
+            if (flags.badEnding) return <div className="min-h-screen bg-black flex items-center justify-center font-sans"><div className="w-full md:max-w-4xl h-screen md:h-[600px] relative rounded-xl overflow-hidden shadow-2xl border-8 border-slate-700"><div className="w-full h-full bg-black flex flex-col items-center justify-center p-8 text-center text-red-600 animate-pulse font-pixel z-50 absolute inset-0"><h1 className="text-2xl mb-4">WRONG CHOICE!</h1>{flags.trapType === 'trap_marriage' ? <><div className="w-48 h-48 relative mb-8"><Character type="sneha" variant="rich_girl" /></div><p className="text-xs text-white mb-4">Sneha married a girl with PAISA, GAADI, MEHENGA GHAR.</p></> : <><div className="w-48 h-48 relative mb-8"><div className="absolute inset-0 -z-10"><AtmosphereSystem type="HIMALAYAS" /></div><div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-32"><Character type="aman" variant="himalaya" /></div></div><p className="text-xs text-white mb-4">"I became a monk in the Himalayas. You kids were found in a basket."</p></>}<p className="text-[10px] text-white mb-8">NO KYUN CLICK KIYA MOTI?!</p><button onClick={handleTrapReset} className="px-6 py-3 bg-red-800 text-white text-xs border border-red-500 hover:bg-red-700">TRY AGAIN</button></div></div></div>;
+
+            return (
+                <div className="min-h-screen bg-slate-900 flex items-center justify-center p-0 md:p-4 font-sans select-none overflow-hidden" onMouseMove={(e) => setMousePos({x:e.clientX, y:e.clientY})}>
+                    <AudioController isMuted={isMuted} track={AUDIO_TRACKS.THEME} shouldPlay={hasInteracted} />
+                    <div className="w-full md:max-w-4xl h-screen md:h-[600px] bg-black relative rounded-xl overflow-hidden shadow-2xl border-8 border-slate-700 flex flex-col">
+                        <div className="absolute inset-0 pointer-events-none z-50 scanlines opacity-20"></div>
+                        <div className="flex-1 relative overflow-hidden bg-gray-900">
+                            {view === 'TITLE' && <TitleScreen onStart={handleStart} onMeet={() => setView('CHARACTERS')} onHighlights={() => setView('HIGHLIGHTS')} />}
+                            {view === 'HIGHLIGHTS' && <HighlightsMode story={STORY} onBack={() => setView('TITLE')} />}
+                            {view === 'CHARACTERS' && <CharacterScreen chars={CHARACTERS} onBack={() => setView('TITLE')} />}
+                            {view === 'CHAPTERS' && <ChapterSelect chapters={Object.keys(STORY)} onSelect={handleChapterSelect} />}
+                            {(view === 'GAME' || view === 'REWIND_MODE') && renderScene && <GameScene scene={renderScene} mousePos={mousePos} onNext={handleNext} onBack={handleBack} onTrap={handleTrap} isTypingComplete={isTypingComplete} onTypingEnd={() => setIsTypingComplete(true)} onHome={() => setView('TITLE')} isRewinding={isRewinding} />}
+                            {view === 'PROPOSAL_FINAL' && <ProposalScene mousePos={mousePos} onReset={() => setView('TITLE')} />}
+                        </div>
+                        <div className="h-10 bg-slate-800 border-t-4 border-slate-600 flex items-center justify-between px-4 z-50"><button onClick={() => setIsMuted(!isMuted)} className="text-slate-400 hover:text-white" onMouseEnter={SoundManager.hover}>{isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><div className="font-pixel text-[8px] text-slate-500">POTBELLY PRODUCTIONS</div></div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
