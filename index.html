@@ -52,7 +52,7 @@
         const ChevronLeft = (p) => <IconBase d="m15 18-6-6 6-6" {...p} />;
         const Rewind = (p) => <IconBase d="m11 19-9-7 9-7v14zM22 19l-9-7 9-7v14z" {...p} />;
         const Home = (p) => <IconBase d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" {...p}><polyline points="9 22 9 12 15 12 15 22" /></IconBase>;
-        const Music = (p) => <IconBase d="M9 18V5l12-2v13" {...p}><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></IconBase>;
+        const Clapperboard = (p) => <IconBase d="M20.2 6 3 11l-.9-2.4c-.5-1.1.2-2.4 1.3-2.9L13.8 2c1.1-.5 2.4.2 2.9 1.3l3.5 2.7z" {...p}><path d="m4.1 12.3 15.8-2.2c1.2-.2 2.3.7 2.5 1.9l2.4 17c.2 1.2-.7 2.3-1.9 2.5L7.1 33.7c-1.2.2-2.3-.7-2.5-1.9l-2.4-17c-.2-1.2.7-2.3 1.9-2.5z" transform="rotate(-10 12 12)"/></IconBase>;
         const RotateCcw = (p) => <IconBase d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" {...p}><path d="M3 3v5h5" /></IconBase>;
         const Users = (p) => <IconBase d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" {...p}><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></IconBase>;
         const Play = (p) => <IconBase d="M5 3l14 9-14 9V3z" {...p} />;
@@ -216,11 +216,11 @@
             }
             else if (type === 'HIMALAYAS') {
                 lightingClass = "bg-blue-200 mix-blend-soft-light opacity-30"; particles = 'snow';
-                bgComponent = <div className="absolute inset-0 bg-blue-200"><div className="absolute bottom-0 w-full h-2/3 bg-white skew-y-6 origin-bottom-left" style={{ transform: `translate(${bgX}px, 0)` }}></div><div className="absolute bottom-0 w-full h-1/2 bg-slate-200 -skew-y-6 origin-bottom-right opacity-60" style={{ transform: `translate(${bgX * 0.5}px, 0)` }}></div><div className="absolute top-10 left-20 w-24 h-24 bg-yellow-100 rounded-full blur-2xl"></div></div>;
+                bgComponent = <div className="absolute inset-0 bg-blue-200"><div className="absolute bottom-0 w-full h-2/3 bg-white skew-y-6 origin-bottom-left" style={{ transform: `translate(${bgX}px, 0)` }}></div><div className="absolute bottom-0 w-full h-1/2 bg-slate-200 -skew-y-6 origin-bottom-right opacity-60" style={{ transform: `translate(${bgX * 0.5}px, 0)` }}></div><div className="absolute top-10 left-20 w-24 h-24 bg-yellow-100 rounded-full blur-2xl"></div><div className="absolute bottom-20 right-20 w-32 h-24 bg-amber-800 rounded-b-lg border-t-8 border-amber-950 opacity-80" style={{ transform: `translate(${bgX}px, 0)` }}></div></div>; // Basket added
             }
             else if (type === 'MARRIAGE' || type === 'WEDDING_RICH') {
                 lightingClass = "bg-red-200 mix-blend-overlay opacity-20"; particles = 'hearts'; crowdType = 'WEDDING';
-                bgComponent = <div className="absolute inset-0 bg-red-50"><div className="absolute top-0 w-full h-32 bg-orange-100 flex justify-around items-end pb-4 border-b-4 border-orange-300"><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div></div><div className="absolute top-0 w-full h-10 bg-orange-500 flex justify-around">{[...Array(12)].map((_,i) => <div key={i} className="w-6 h-12 bg-yellow-400 rounded-b-full border-2 border-red-500"></div>)}</div></div>;
+                bgComponent = <div className="absolute inset-0 bg-red-50"><div className="absolute top-0 w-full h-32 bg-orange-100 flex justify-around items-end pb-4 border-b-4 border-orange-300"><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div><div className="w-4 h-full bg-yellow-600"></div></div><div className="absolute top-0 w-full h-10 bg-orange-500 flex justify-around">{[...Array(12)].map((_,i) => <div key={i} className="w-6 h-12 bg-yellow-400 rounded-b-full border-2 border-red-500"></div>)}</div>{type === 'WEDDING_RICH' && <div className="absolute top-20 left-10 text-6xl text-green-600 opacity-20 font-bold">$ $ $</div>}</div>;
             }
             else if (type === 'COLLEGE') {
                 lightingClass = "bg-blue-100 mix-blend-soft-light opacity-10"; crowdType = 'STUDENTS';
@@ -283,9 +283,9 @@
             return (
                 <div className="w-full h-full relative">
                     <GameScene scene={scenes[idx]} onHome={onBack} isTypingComplete={true} hideUI={true} mousePos={{x:0, y:0}} />
-                    <div className="absolute top-4 right-4 z-50">
-                        <button onClick={onBack} className="bg-black/50 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm">
-                            <Home size={20} />
+                    <div className="absolute top-4 left-4 z-50">
+                        <button onClick={onBack} className="bg-black/50 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm active:scale-95 transition-transform">
+                            <Home size={24} />
                         </button>
                     </div>
                     <div className="absolute bottom-8 left-0 w-full text-center pointer-events-none z-50">
@@ -339,7 +339,7 @@
             );
         };
 
-        const GameScene = ({ scene, mousePos, onNext, onBack, onTrap, isTypingComplete, onTypingEnd, onHome, isRewinding = false, hideUI = false }) => {
+        const GameScene = ({ scene, mousePos, onNext, onBack, onTrap, isTypingComplete, onTypingEnd, onHome, isRewinding = false, hideUI = false, isBadEnding = false }) => {
             const renderChars = () => {
                 if (!scene.characters) return null;
                 return (
@@ -353,6 +353,9 @@
                             else if (char === 'sneha_bride') { type = 'sneha'; variant = 'bride'; }
                             else if (char === 'dad') { type = 'dad'; }
                             else if (char === 'mom') { type = 'mom'; }
+                            // BAD ENDING CHARACTERS
+                            else if (char === 'aman_himalaya') { type = 'aman'; variant = 'himalaya'; }
+                            else if (char === 'sneha_rich_girl') { type = 'sneha'; variant = 'rich_girl'; }
                             
                             return (
                                 <div key={idx} className={`w-24 h-24 md:w-40 md:h-40 relative`}>
@@ -374,9 +377,11 @@
                     {scene.effect === 'spotlight' && <div className="absolute inset-0 bg-black/80 z-40 pointer-events-none"><div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-yellow-200/10 rounded-full blur-2xl"></div></div>}
 
                     {!hideUI && !isRewinding && (
-                        <div className="h-44 md:h-40 bg-slate-900 border-t-4 border-white p-4 relative z-50 flex flex-col shadow-lg">
-                            <button onClick={onHome} className="absolute -top-10 right-0 bg-slate-700 p-2 text-white rounded hover:bg-slate-600"><Home size={16}/></button>
-                            <div className="absolute -top-3 left-4 bg-pink-600 text-white font-pixel text-[10px] px-2 py-1 border border-white rounded uppercase">{scene.speaker || 'NARRATOR'}</div>
+                        <div className={`h-44 md:h-40 bg-slate-900 border-t-4 ${isBadEnding ? 'border-red-600' : 'border-white'} p-4 relative z-50 flex flex-col shadow-lg`}>
+                            {/* HOME BUTTON (MOVED TO TOP RIGHT) */}
+                            <button onClick={onHome} className="absolute -top-10 right-4 bg-slate-700 p-2 text-white rounded-full hover:bg-slate-600 border border-white/20 shadow-lg active:scale-95 transition-transform"><Home size={20} /></button>
+                            
+                            <div className={`absolute -top-3 left-4 ${isBadEnding ? 'bg-red-600' : 'bg-pink-600'} text-white font-pixel text-[10px] px-2 py-1 border border-white rounded uppercase`}>{scene.speaker || (isBadEnding ? 'GAME OVER' : 'NARRATOR')}</div>
                             <div className="flex-1 text-white font-pixel mt-2">
                                 {scene.type === 'CHOICE' ? (
                                     <div className="flex flex-col items-center gap-4 mt-2 animate-fade-in">
@@ -387,40 +392,23 @@
                                             ))}
                                         </div>
                                     </div>
+                                ) : scene.type === 'TRY_AGAIN' ? (
+                                    <div className="flex flex-col items-center gap-4 mt-2 animate-fade-in">
+                                        <p className="text-red-400 text-xs text-center">{scene.text}</p>
+                                        <button onClick={onNext} className="px-6 py-3 bg-red-800 hover:bg-red-700 text-white text-xs border-b-4 border-red-900 active:border-b-0 active:translate-y-1 rounded transition-all font-pixel">TRY AGAIN</button>
+                                    </div>
                                 ) : (
                                     <Typewriter text={scene.text} onComplete={onTypingEnd} isFastForwarding={isTypingComplete} />
                                 )}
                             </div>
-                            <div className="absolute bottom-3 left-3 flex gap-2"><div className="text-slate-400 hover:text-white cursor-pointer" onClick={onBack}><ChevronLeft size={24} /></div></div>
-                            {scene.type !== 'CHOICE' && <div className={`absolute bottom-3 right-3 text-yellow-400 animate-bounce cursor-pointer ${!isTypingComplete ? 'opacity-50' : 'opacity-100'}`} onClick={onNext}><ChevronRight size={24} /></div>}
-                            {!isTypingComplete && scene.type !== 'CHOICE' && <div className="absolute inset-0 z-50 cursor-pointer" onClick={onTypingEnd}></div>}
+                            
+                            {!isBadEnding && <div className="absolute bottom-3 left-3 flex gap-2"><div className="text-slate-400 hover:text-white cursor-pointer" onClick={onBack}><ChevronLeft size={24} /></div></div>}
+                            
+                            {scene.type !== 'CHOICE' && scene.type !== 'TRY_AGAIN' && <div className={`absolute bottom-3 right-3 text-yellow-400 animate-bounce cursor-pointer ${!isTypingComplete ? 'opacity-50' : 'opacity-100'}`} onClick={onNext}><ChevronRight size={24} /></div>}
+                            
+                            {!isTypingComplete && scene.type !== 'CHOICE' && scene.type !== 'TRY_AGAIN' && <div className="absolute inset-0 z-50 cursor-pointer" onClick={onTypingEnd}></div>}
                         </div>
                     )}
-                </div>
-            );
-        };
-
-        const BadEndingScreen = ({ type, onReset }) => {
-            const isMarriageTrap = type === 'trap_marriage';
-            return (
-                <div className="w-full h-full bg-black flex flex-col items-center justify-center p-8 text-center text-red-600 animate-pulse font-pixel z-50 absolute inset-0">
-                    <h1 className="text-2xl mb-4">WRONG CHOICE!</h1>
-                    {isMarriageTrap ? (
-                        <>
-                            <div className="w-48 h-48 relative mb-8"><Character type="sneha" variant="rich_girl" /></div>
-                            <p className="text-xs text-white mb-4">Sneha married a girl with PAISA, GAADI, MEHENGA GHAR.</p>
-                        </>
-                    ) : (
-                        <>
-                              <div className="w-48 h-48 relative mb-8">
-                                  <div className="absolute inset-0 -z-10"><AtmosphereSystem type="HIMALAYAS" /></div>
-                                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-32"><Character type="aman" variant="himalaya" /></div>
-                              </div>
-                              <p className="text-xs text-white mb-4">"I became a monk in the Himalayas. You kids were found in a basket."</p>
-                        </>
-                    )}
-                    <p className="text-[10px] text-white mb-8">NO KYUN CLICK KIYA MOTI?!</p>
-                    <button onClick={onReset} className="px-6 py-3 bg-red-800 text-white text-xs border border-red-500 hover:bg-red-700">TRY AGAIN</button>
                 </div>
             );
         };
@@ -431,15 +419,15 @@
                 <Heart className="w-16 h-16 text-red-500 fill-current animate-bounce mb-4 z-10" />
                 <h1 className="font-pixel text-xl md:text-3xl text-yellow-300 drop-shadow-md mb-8 leading-relaxed z-10">HOW I MET<br/>MY BABU</h1>
                 
-                <div className="flex flex-col gap-4 z-10">
-                    <button onClick={onStart} onMouseEnter={SoundManager.hover} className="px-8 py-3 bg-yellow-400 text-black font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-yellow-600 rounded flex items-center justify-center gap-2 shadow-lg">
-                        <Play size={16} /> PLAY STORY
+                <div className="flex flex-col gap-4 z-10 w-64">
+                    <button onClick={onStart} onMouseEnter={SoundManager.hover} className="w-full px-4 py-3 bg-yellow-400 hover:bg-yellow-300 text-black font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-yellow-600 rounded flex items-center justify-center gap-3 shadow-lg group">
+                        <Play size={18} className="group-hover:fill-current"/> PLAY STORY
                     </button>
-                    <button onClick={onMeet} onMouseEnter={SoundManager.hover} className="px-8 py-3 bg-blue-500 text-white font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-blue-700 rounded flex items-center justify-center gap-2 shadow-lg">
-                        <Users size={16} /> MEET THE CAST
+                    <button onClick={onMeet} onMouseEnter={SoundManager.hover} className="w-full px-4 py-3 bg-blue-500 hover:bg-blue-400 text-white font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-blue-700 rounded flex items-center justify-center gap-3 shadow-lg">
+                        <Users size={18} /> MEET THE CAST
                     </button>
-                    <button onClick={onHighlights} onMouseEnter={SoundManager.hover} className="px-8 py-3 bg-pink-500 text-white font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-pink-700 rounded flex items-center justify-center gap-2 shadow-lg">
-                        <Music size={16} /> HIGHLIGHTS
+                    <button onClick={onHighlights} onMouseEnter={SoundManager.hover} className="w-full px-4 py-3 bg-pink-500 hover:bg-pink-400 text-white font-pixel text-xs hover:scale-105 transition-transform border-b-4 border-pink-700 rounded flex items-center justify-center gap-3 shadow-lg">
+                        <Clapperboard size={18} /> HIGHLIGHTS
                     </button>
                 </div>
             </div>
@@ -536,7 +524,11 @@
             const [sceneIndex, setSceneIndex] = useState(0);
             const [isMuted, setIsMuted] = useState(false);
             const [isTypingComplete, setIsTypingComplete] = useState(false);
-            const [flags, setFlags] = useState({ badEnding: false, trapType: null });
+            // Bad Ending State
+            const [isBadEnding, setIsBadEnding] = useState(false);
+            const [badSceneIndex, setBadSceneIndex] = useState(0);
+            const [currentTrapType, setCurrentTrapType] = useState(null);
+
             const [history, setHistory] = useState([]); 
             const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
             const [isRewinding, setIsRewinding] = useState(false);
@@ -549,6 +541,23 @@
                 { id: 'siya', name: 'Siya', sub: 'The Eldest', desc: 'Cute, smart, and asks too many logical questions.', type: 'siya' },
                 { id: 'ezio', name: 'Ezio', sub: 'The Assassin', desc: 'Gamer kid. Named after something Sneha hates.', type: 'ezio' }
             ];
+
+            // TRAP SCENES DATA
+            const TRAP_SCENES = {
+                trap_himalaya: [
+                    { bg: 'HIMALAYAS', speaker: 'AMAN', text: "She said no... I was devastated.", characters: ['aman_himalaya'] },
+                    { bg: 'HIMALAYAS', speaker: 'AMAN', text: "I left everything behind. Civilization, coding, momos...", characters: ['aman_himalaya'] },
+                    { bg: 'HIMALAYAS', speaker: 'AMAN', text: "I became a monk. Years passed in silence.", characters: ['aman_himalaya'] },
+                    { bg: 'HIMALAYAS', speaker: 'AMAN', text: "One day, I found you kids floating in a basket down the river.", characters: ['aman_himalaya'] },
+                    { type: 'TRY_AGAIN', bg: 'HIMALAYAS', text: "Wait! That's not how it happened! Dad, stop lying!" }
+                ],
+                trap_marriage: [
+                    { bg: 'WEDDING_RICH', speaker: 'AMAN', text: "Our parents didn't agree. It was chaos.", characters: ['sneha_rich_girl'] },
+                    { bg: 'WEDDING_RICH', speaker: 'AMAN', text: "Sneha was forced to marry this rich guy with a 'Paisa Gaadi Bangla'.", characters: ['sneha_rich_girl'] },
+                    { bg: 'WEDDING_RICH', speaker: 'SNEHA', text: "Look at all this money! But I am so sad inside.", characters: ['sneha_rich_girl'] },
+                    { type: 'TRY_AGAIN', bg: 'WEDDING_RICH', text: "No way! Nani loves you too much for that!" }
+                ]
+            };
 
             const STORY = {
                 1: [
@@ -643,6 +652,20 @@
             const handleNext = () => {
                 if (!isTypingComplete) { setIsTypingComplete(true); return; }
                 SoundManager.click();
+                
+                // --- BAD ENDING LOGIC START ---
+                if (isBadEnding) {
+                    const currentTrapList = TRAP_SCENES[currentTrapType];
+                    if (badSceneIndex < currentTrapList.length - 1) {
+                        setBadSceneIndex(prev => prev + 1);
+                    } else {
+                        // "Try Again" clicked - Reset to decision point
+                        handleTrapReset();
+                    }
+                    return;
+                }
+                // --- BAD ENDING LOGIC END ---
+
                 const currentSceneData = STORY[currentChapter][sceneIndex];
                 if (currentSceneData.type !== 'CHOICE' && currentSceneData.type !== 'PROPOSAL_TRANSITION') setHistory(prev => [...prev, currentSceneData]);
                 const currentSceneList = STORY[currentChapter];
@@ -658,16 +681,33 @@
             };
             const startRewind = () => { setIsRewinding(true); setRewindIndex(history.length - 1); setView('REWIND_MODE'); };
             useEffect(() => { if (view === 'REWIND_MODE' && rewindIndex >= 0) { const timer = setTimeout(() => { setRewindIndex(prev => prev - 1); }, 50); return () => clearTimeout(timer); } else if (view === 'REWIND_MODE' && rewindIndex < 0) { setView('PROPOSAL_FINAL'); setIsRewinding(false); } }, [view, rewindIndex]);
-            const handleTrap = (type) => { SoundManager.trap(); setFlags({ badEnding: true, trapType: type }); };
-            const handleTrapReset = () => { SoundManager.click(); setFlags({ badEnding: false, trapType: null }); };
-
-            let renderScene = STORY[currentChapter] ? STORY[currentChapter][sceneIndex] : null;
-            if (view === 'REWIND_MODE' && history[rewindIndex]) renderScene = history[rewindIndex];
             
-            // Background Logic for Image (CAFE_REAL)
-            const isCafeReal = renderScene && renderScene.bg === 'CAFE_REAL';
+            // --- NEW TRAP HANDLER ---
+            const handleTrap = (type) => {
+                SoundManager.trap();
+                setIsBadEnding(true);
+                setCurrentTrapType(type);
+                setBadSceneIndex(0);
+                setView('GAME'); // Keep view as GAME, but render logic will switch
+            };
+            
+            const handleTrapReset = () => {
+                SoundManager.click();
+                setIsBadEnding(false);
+                setCurrentTrapType(null);
+                setBadSceneIndex(0);
+                // No need to change sceneIndex, we are back at choice
+            };
 
-            if (flags.badEnding) return <div className="min-h-screen bg-black flex items-center justify-center font-sans"><div className="w-full md:max-w-4xl h-screen md:h-[600px] relative rounded-xl overflow-hidden shadow-2xl border-8 border-slate-700"><div className="w-full h-full bg-black flex flex-col items-center justify-center p-8 text-center text-red-600 animate-pulse font-pixel z-50 absolute inset-0"><h1 className="text-2xl mb-4">WRONG CHOICE!</h1>{flags.trapType === 'trap_marriage' ? <><div className="w-48 h-48 relative mb-8"><Character type="sneha" variant="rich_girl" /></div><p className="text-xs text-white mb-4">Sneha married a girl with PAISA, GAADI, MEHENGA GHAR.</p></> : <><div className="w-48 h-48 relative mb-8"><div className="absolute inset-0 -z-10"><AtmosphereSystem type="HIMALAYAS" /></div><div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-32"><Character type="aman" variant="himalaya" /></div></div><p className="text-xs text-white mb-4">"I became a monk in the Himalayas. You kids were found in a basket."</p></>}<p className="text-[10px] text-white mb-8">NO KYUN CLICK KIYA MOTI?!</p><button onClick={handleTrapReset} className="px-6 py-3 bg-red-800 text-white text-xs border border-red-500 hover:bg-red-700">TRY AGAIN</button></div></div></div>;
+            // RENDER LOGIC
+            let renderScene = null;
+            if (isBadEnding) {
+                renderScene = TRAP_SCENES[currentTrapType][badSceneIndex];
+            } else if (view === 'REWIND_MODE' && history[rewindIndex]) {
+                renderScene = history[rewindIndex];
+            } else {
+                renderScene = STORY[currentChapter] ? STORY[currentChapter][sceneIndex] : null;
+            }
 
             return (
                 <div className="min-h-screen bg-slate-900 flex items-center justify-center p-0 md:p-4 font-sans select-none overflow-hidden" onMouseMove={(e) => setMousePos({x:e.clientX, y:e.clientY})}>
@@ -679,7 +719,7 @@
                             {view === 'HIGHLIGHTS' && <HighlightsMode story={STORY} onBack={() => setView('TITLE')} />}
                             {view === 'CHARACTERS' && <CharacterScreen chars={CHARACTERS} onBack={() => setView('TITLE')} />}
                             {view === 'CHAPTERS' && <ChapterSelect chapters={Object.keys(STORY)} onSelect={handleChapterSelect} />}
-                            {(view === 'GAME' || view === 'REWIND_MODE') && renderScene && <GameScene scene={renderScene} mousePos={mousePos} onNext={handleNext} onBack={handleBack} onTrap={handleTrap} isTypingComplete={isTypingComplete} onTypingEnd={() => setIsTypingComplete(true)} onHome={() => setView('TITLE')} isRewinding={isRewinding} />}
+                            {(view === 'GAME' || view === 'REWIND_MODE') && renderScene && <GameScene scene={renderScene} mousePos={mousePos} onNext={handleNext} onBack={handleBack} onTrap={handleTrap} isTypingComplete={isTypingComplete} onTypingEnd={() => setIsTypingComplete(true)} onHome={() => setView('TITLE')} isRewinding={isRewinding} isBadEnding={isBadEnding} />}
                             {view === 'PROPOSAL_FINAL' && <ProposalScene mousePos={mousePos} onReset={() => setView('TITLE')} />}
                         </div>
                         <div className="h-10 bg-slate-800 border-t-4 border-slate-600 flex items-center justify-between px-4 z-50"><button onClick={() => setIsMuted(!isMuted)} className="text-slate-400 hover:text-white" onMouseEnter={SoundManager.hover}>{isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button><div className="font-pixel text-[8px] text-slate-500">POTBELLY PRODUCTIONS</div></div>
